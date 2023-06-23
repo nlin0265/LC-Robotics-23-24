@@ -2,6 +2,7 @@
 #include "cmath"
 #include "pros/adi.h"
 #include "pros/adi.hpp"
+#include "pros/llemu.h"
 #include "pros/llemu.hpp"
 #include "pros/misc.h"
 #include "pros/motors.h"
@@ -33,33 +34,26 @@ void runDrive(int forward);
 void autonSkills();
 
 //GLOBAL-SCOPE VARIABLES(Ports)
-#define PORT_BACK_LEFT 1
-#define PORT_BACK_RIGHT 11
-#define PORT_FRONT_LEFT 15 
-#define PORT_FRONT_RIGHT 17
-#define PORT_MIDDLE 16
-#define PORT_ROLLER 12
-#define PORT_INTAKE 9
-#define PORT_INDEXER 14
-#define PORT_FLY_WHEEL 13
+#define PORT_LEFT_FRONT 10
+#define PORT_LEFT_BACK 9
+#define PORT_RIGHT_FRONT 20 
+#define PORT_RIGHT_BACK 19
+
 
 
 //FILE-SCOPE VARIABLES
 Controller master (E_CONTROLLER_MASTER);
-Motor motorBackLeft   (PORT_BACK_LEFT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorBackRight(PORT_BACK_RIGHT, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
-Motor motorFrontLeft   (PORT_FRONT_LEFT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorFrontRight  (PORT_FRONT_RIGHT,  E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
-Motor motorMiddle     (PORT_MIDDLE,      E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
-const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
+Motor motorRightFront   (PORT_RIGHT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
+Motor motorLeftFront   (PORT_LEFT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorLeftBack  (PORT_LEFT_BACK,  E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
+const double ATOV = 100.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
 const double KARSTANT = 0.552;
 const double ABBYS_CONSTANT = 0.380;
 const double ROBOT_DIAMETER = 17.334935823359;
 const double WHEEL_DIAMETER = 4; 
 const double PI = M_PI;
-double AUTONOMOUS_SPEED = 100.0; 
-bool isBreaking = false;
-bool isFlyWheel = false;
+double AUTONOMOUS_SPEED = 100.0;
 
 
 
@@ -93,19 +87,21 @@ void opcontrol() {
 
   //drive loop
   while (true) {
-    
-     //brakes
-    if (master.get_digital(E_CONTROLLER_DIGITAL_L1)){
-    brake();
+    if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)){
+      brake();
     }
     else{
-    moveUpdate();
-    coast();
+      moveUpdate();
+      lcd::set_text(4, to_string(motorRightBack.get_temperature()));
+      coast();
+    }
+    
+   
    }
-   delay(3);
+   delay(5);
     }
 
-  }
+
 
 
 
@@ -130,31 +126,30 @@ void moveUpdate() {
 	//accepts input from controller
 	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
   int rotate = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
-  int strafe = master.get_analog(E_CONTROLLER_ANALOG_LEFT_X);
-  motorBackLeft.move_velocity((-forward -rotate) * ATOV);
-  motorBackRight.move_velocity((-forward +rotate) *ATOV);
-  motorFrontRight.move_velocity((+forward -rotate) * ATOV);
-  motorFrontLeft.move_velocity((+forward +rotate) * ATOV);
-  motorMiddle.move_velocity((+strafe) * ATOV);
+  motorRightBack.move_velocity((-forward -rotate) *ATOV);
+  motorRightFront.move_velocity((-forward +rotate) * ATOV);
+  motorLeftBack.move_velocity((+forward -rotate) * ATOV);
+  motorLeftFront.move_velocity((+forward +rotate) * ATOV);
+  
 }
 
 //Breaks
   void brake(){
-    motorFrontRight.move_velocity(0);
-   motorFrontLeft.move_velocity(0);
-   motorBackLeft.move_velocity(0);
-    motorBackRight.move(0);
-   motorFrontRight.set_brake_mode(E_MOTOR_BRAKE_HOLD);
-   motorFrontLeft.set_brake_mode(E_MOTOR_BRAKE_HOLD);
-   motorBackLeft.set_brake_mode(E_MOTOR_BRAKE_HOLD);
-    motorBackRight.set_brake_mode(E_MOTOR_BRAKE_HOLD);
+    motorRightFront.move_velocity(0);
+   motorLeftFront.move_velocity(0);
+   motorLeftBack.move_velocity(0);
+    motorRightFront.move(0);
+   motorRightFront.set_brake_mode(E_MOTOR_BRAKE_HOLD);
+   motorLeftFront.set_brake_mode(E_MOTOR_BRAKE_HOLD);
+   motorLeftBack.set_brake_mode(E_MOTOR_BRAKE_HOLD);
+    motorRightBack.set_brake_mode(E_MOTOR_BRAKE_HOLD);
   }
 
   void coast(){
-    motorFrontRight.set_brake_mode(E_MOTOR_BRAKE_COAST);
-    motorFrontLeft.set_brake_mode(E_MOTOR_BRAKE_COAST);
-    motorBackLeft.set_brake_mode(E_MOTOR_BRAKE_COAST);
-    motorBackRight.set_brake_mode(E_MOTOR_BRAKE_COAST);
+    motorRightFront.set_brake_mode(E_MOTOR_BRAKE_COAST);
+    motorLeftFront.set_brake_mode(E_MOTOR_BRAKE_COAST);
+    motorLeftBack.set_brake_mode(E_MOTOR_BRAKE_COAST);
+    motorRightBack.set_brake_mode(E_MOTOR_BRAKE_COAST);
   }
 
 //Opening and Closing claw
@@ -176,79 +171,73 @@ void advance(double moveInches) {
 	double motorDegrees = moveInches / (WHEEL_DIAMETER * PI) * 360 * KARSTANT;
 
   //robot knows its relative positions
-  motorBackRight.tare_position();
-  motorBackLeft.tare_position();
-  motorFrontLeft.tare_position();
-  motorFrontRight.tare_position();
+  motorRightBack.tare_position();
+  motorLeftBack.tare_position();
+  motorLeftFront.tare_position();
+  motorRightFront.tare_position();
 
   //move robot
-  motorBackLeft  .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorBackRight .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorFrontLeft  .move_relative(motorDegrees, AUTONOMOUS_SPEED);
-	motorFrontRight .move_relative(motorDegrees, AUTONOMOUS_SPEED);
+  motorLeftBack  .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+	motorRightBack .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+	motorLeftFront  .move_relative(motorDegrees, AUTONOMOUS_SPEED);
+	motorRightFront .move_relative(motorDegrees, AUTONOMOUS_SPEED);
 
   //robot finish running move_relative before eliminates momentum
-  while(!(motorFrontRight.get_position() < (motorDegrees + 2) && motorFrontRight.get_position() > (motorDegrees-2))){
+  while(!(motorRightFront.get_position() < (motorDegrees + 2) && motorRightFront.get_position() > (motorDegrees-2))){
     delay(20);
   }
 
   //elimainates momentum
-  motorFrontLeft.move_velocity(0);
-  motorFrontRight.move_velocity(0);
-  motorBackLeft.move_velocity(0);
-  motorBackRight.move_velocity(0);
+  motorLeftFront.move_velocity(0);
+  motorRightFront.move_velocity(0);
+  motorLeftBack.move_velocity(0);
+  motorRightBack.move_velocity(0);
 
   coast();
 }
 
-void strafe(double moveInches) {
-	double motorDegrees = (moveInches/(WHEEL_DIAMETER*PI)) * 360 * KARSTANT;
-  motorMiddle.move_relative(motorDegrees, AUTONOMOUS_SPEED);
-}
-
-
 void turn(double driveDegrees) {
   double motorDegrees = ((360 * driveDegrees * (PI/180) * (ROBOT_DIAMETER/2)) / (WHEEL_DIAMETER)) * ABBYS_CONSTANT;
  
-  motorBackLeft  .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorBackRight .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-	motorFrontLeft  .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-	motorFrontRight .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+  motorLeftBack  .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+	motorRightBack .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
+	motorLeftFront  .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
+	motorRightFront .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
   
   //robot knows its relative positions
   
-  motorFrontLeft.tare_position();
-  motorFrontRight.tare_position();
+  motorLeftFront.tare_position();
+  motorRightFront.tare_position();
 
   //move robot
-  motorBackLeft  .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorBackRight .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-	motorFrontLeft  .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-	motorFrontRight .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+  motorLeftBack  .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+	motorRightBack .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
+	motorLeftFront  .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
+	motorRightFront .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
   //delay(1500);
   
-  /*while(motorFrontLeft.get_position() < motorDegrees*5 || motorFrontLeft.get_actual_velocity() > 10){
+  /*while(motorLeftFront.get_position() < motorDegrees*5 || motorLeftFront.get_actual_velocity() > 10){
     delay(20);
   }
   */
   //elimainates momentum
-  while(!(motorFrontLeft.get_position() < (motorDegrees + 2) && motorFrontLeft.get_position() > (motorDegrees-2))){
+  while(!(motorLeftFront.get_position() < (motorDegrees + 2) && motorLeftFront.get_position() > (motorDegrees-2))){
     delay(20);
   }
-  motorBackLeft.move_velocity(0);
-  motorBackRight.move_velocity(0);
-  motorFrontLeft.move_velocity(0);
-  motorFrontRight.move_velocity(0);
+  motorLeftBack.move_velocity(0);
+  motorRightBack.move_velocity(0);
+  motorLeftFront.move_velocity(0);
+  motorRightFront.move_velocity(0);
 
   coast();
   lcd::set_text(5, "Ive stopped turning");
 }
 
 void runDrive(int forward){
-  motorFrontRight.move_velocity(forward * AUTONOMOUS_SPEED);
-  motorFrontLeft.move_velocity(forward * AUTONOMOUS_SPEED);
-  motorBackLeft.move_velocity(-forward*AUTONOMOUS_SPEED);
-  motorBackRight.move_velocity(-forward*AUTONOMOUS_SPEED);
+  motorRightFront.move_velocity(forward * AUTONOMOUS_SPEED);
+  motorLeftFront.move_velocity(forward * AUTONOMOUS_SPEED);
+  motorLeftBack.move_velocity(-forward*AUTONOMOUS_SPEED);
+  motorRightBack.move_velocity(-forward*AUTONOMOUS_SPEED);
 }
 
 //Auton Period Code
