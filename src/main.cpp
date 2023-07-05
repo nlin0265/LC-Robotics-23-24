@@ -47,13 +47,14 @@ Motor motorRightFront   (PORT_RIGHT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCO
 Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
 Motor motorLeftFront   (PORT_LEFT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
 Motor motorLeftBack  (PORT_LEFT_BACK,  E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
-const double ATOV = 100.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
+const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
 const double KARSTANT = 0.552;
 const double ABBYS_CONSTANT = 0.380;
 const double ROBOT_DIAMETER = 17.334935823359;
 const double WHEEL_DIAMETER = 4; 
 const double PI = M_PI;
 double AUTONOMOUS_SPEED = 100.0;
+double motorTemperatureDrive;
 
 
 
@@ -92,7 +93,8 @@ void opcontrol() {
     }
     else{
       moveUpdate();
-      lcd::set_text(4, to_string(motorRightBack.get_temperature()));
+      motorTemperatureDrive = motorRightBack.get_temperature();
+      lcd::set_text(4, to_string(motorTemperatureDrive) + " F");
       coast();
     }
     
@@ -126,9 +128,9 @@ void moveUpdate() {
 	//accepts input from controller
 	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
   int rotate = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
-  motorRightBack.move_velocity((-forward -rotate) *ATOV);
-  motorRightFront.move_velocity((-forward +rotate) * ATOV);
-  motorLeftBack.move_velocity((+forward -rotate) * ATOV);
+  motorRightBack.move_velocity((-forward -rotate) * ATOV);
+  motorRightFront.move_velocity((-forward -rotate) * ATOV);
+  motorLeftBack.move_velocity((+forward +rotate) * ATOV);
   motorLeftFront.move_velocity((+forward +rotate) * ATOV);
   
 }
