@@ -128,8 +128,8 @@ void moveUpdate() {
 	//accepts input from controller
 	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
   int rotate = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
-  motorRightBack.move_velocity((-forward -rotate) * ATOV);
-  motorRightFront.move_velocity((-forward -rotate) * ATOV);
+  motorRightBack.move_velocity((-forward +rotate) * ATOV);
+  motorRightFront.move_velocity((-forward +rotate) * ATOV);
   motorLeftBack.move_velocity((+forward +rotate) * ATOV);
   motorLeftFront.move_velocity((+forward +rotate) * ATOV);
   
