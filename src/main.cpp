@@ -36,10 +36,10 @@ void runDrive(int forward);
 void autonSkills();
 
 //GLOBAL-SCOPE VARIABLES(Ports)
-#define PORT_LEFT_FRONT 10
-#define PORT_LEFT_BACK 9
-#define PORT_RIGHT_FRONT 20 
-#define PORT_RIGHT_BACK 19
+#define PORT_LEFT_FRONT 12
+#define PORT_LEFT_BACK 14
+#define PORT_RIGHT_FRONT 11
+#define PORT_RIGHT_BACK 13
 #define PORT_INTAKE 1
 
 //FILE-SCOPE VARIABLES
@@ -138,10 +138,14 @@ void disabled() {
 //Drive
 void moveUpdate() {
 	//accepts input from controller
-	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
+	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y); 
   int rotate = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
-  motorRightBack.move_velocity((+forward -rotate) * ATOV);
-  motorRightFront.move_velocity((+forward -rotate) * ATOV);
+  /*In the building of the robot, the two sides of the motors are positioned in a way where when in the code, 
+  the motors are programmed to go in the same direction it translates to the motors going in different directions in the actual build.
+  making the rotate variable going in the same direction and the forward variable go in different directions will fix the problem in the 
+  actual robot itself*/
+  motorRightBack.move_velocity((-forward +rotate) * ATOV); 
+  motorRightFront.move_velocity((-forward +rotate) * ATOV);
   motorLeftBack.move_velocity((+forward +rotate) * ATOV);
   motorLeftFront.move_velocity((+forward +rotate) * ATOV);
 }
