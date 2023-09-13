@@ -45,15 +45,15 @@ void autonSkills();
 //FILE-SCOPE VARIABLES
 Controller master (E_CONTROLLER_MASTER);
 Motor motorRightFront   (PORT_RIGHT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
+Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 0, pros::E_MOTOR_ENCODER_DEGREES);
 Motor motorLeftFront   (PORT_LEFT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorLeftBack  (PORT_LEFT_BACK,  E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
+Motor motorLeftBack  (PORT_LEFT_BACK,  E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
 Motor motorIntake(PORT_INTAKE, E_MOTOR_GEARSET_18, 0,E_MOTOR_ENCODER_DEGREES);
 const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
 const double KARSTANT = 0.552;
 const double ABBYS_CONSTANT = 0.380;
-const double ROBOT_DIAMETER = 17.334935823359;
-const double WHEEL_DIAMETER = 4; 
+const double ROBOT_DIAMETER = 17.334935823359; //inches
+const double WHEEL_DIAMETER = 4; //inches
 const double PI = M_PI;
 double AUTONOMOUS_SPEED = 100.0;
 double motorTemperatureDrive;
@@ -140,12 +140,9 @@ void moveUpdate() {
 	//accepts input from controller
 	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y); 
   int rotate = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
-  /*In the building of the robot, the two sides of the motors are positioned in a way where when in the code, 
-  the motors are programmed to go in the same direction it translates to the motors going in different directions in the actual build.
-  making the rotate variable going in the same direction and the forward variable go in different directions will fix the problem in the 
-  actual robot itself*/
-  motorRightBack.move_velocity((-forward +rotate) * ATOV); 
-  motorRightFront.move_velocity((-forward +rotate) * ATOV);
+ 
+  motorRightBack.move_velocity((+forward -rotate) * ATOV); 
+  motorRightFront.move_velocity((+forward -rotate) * ATOV);
   motorLeftBack.move_velocity((+forward +rotate) * ATOV);
   motorLeftFront.move_velocity((+forward +rotate) * ATOV);
 }
@@ -155,7 +152,7 @@ void moveUpdate() {
     motorRightFront.move_velocity(0);
    motorLeftFront.move_velocity(0);
    motorLeftBack.move_velocity(0);
-    motorRightFront.move(0);
+    motorRightFront.move_velocity(0);
    motorRightFront.set_brake_mode(E_MOTOR_BRAKE_HOLD);
    motorLeftFront.set_brake_mode(E_MOTOR_BRAKE_HOLD);
    motorLeftBack.set_brake_mode(E_MOTOR_BRAKE_HOLD);
