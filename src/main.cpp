@@ -23,8 +23,8 @@ using namespace lcd;
 void moveUpdate();
 void brake();
 void coast();
-void intake(int direction);
-void stopIntake();
+void puncher();
+void stopPuncher();
 void clawClose();
 void clawOpen();
 
@@ -36,19 +36,24 @@ void runDrive(int forward);
 void autonSkills();
 
 //GLOBAL-SCOPE VARIABLES(Ports)
-#define PORT_LEFT_FRONT 12
-#define PORT_LEFT_BACK 14
-#define PORT_RIGHT_FRONT 11
-#define PORT_RIGHT_BACK 13
-#define PORT_INTAKE 1
+#define PORT_LEFT_FRONT 13
+#define PORT_LEFT_MIDDLE 12
+#define PORT_LEFT_BACK 11
+#define PORT_RIGHT_FRONT 3
+#define PORT_RIGHT_MIDDLE 2
+#define PORT_RIGHT_BACK 1
+#define PORT_PUNCHER 9
 
-//FILE-SCOPE VARIABLES
+//FILE-SCOPE VARIABLE
 Controller master (E_CONTROLLER_MASTER);
-Motor motorRightFront   (PORT_RIGHT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 0, pros::E_MOTOR_ENCODER_DEGREES);
-Motor motorLeftFront   (PORT_LEFT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorLeftFront   (PORT_LEFT_FRONT,   E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
+Motor motorLeftMiddle(PORT_LEFT_MIDDLE, E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
 Motor motorLeftBack  (PORT_LEFT_BACK,  E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorIntake(PORT_INTAKE, E_MOTOR_GEARSET_18, 0,E_MOTOR_ENCODER_DEGREES);
+Motor motorRightFront(PORT_RIGHT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorRightMiddle(PORT_RIGHT_MIDDLE, E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
+
+Motor motorPuncher(PORT_PUNCHER, E_MOTOR_GEARSET_18, 0,E_MOTOR_ENCODER_DEGREES);
 const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
 const double KARSTANT = 0.552;
 const double ABBYS_CONSTANT = 0.380;
@@ -89,6 +94,7 @@ void opcontrol() {
   }
 
   //drive loop
+  motorPuncher.set_zero_position(motorPuncher.tare_position());
   while (true) {
     if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)){/*This button is what allows our robot to break if necessary*/
       brake();
@@ -101,13 +107,7 @@ void opcontrol() {
     }
 
     if (master.get_digital(pros::E_CONTROLLER_DIGITAL_A)){
-    intake(1);
-    }
-    else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_B)) {
-    intake(-1);
-    }
-    else{
-      stopIntake();
+    puncher();
     }
 
     delay(10);//the delay allows for all the commands to be executed properly before the loop starts again, which reduces the chances of bugs happening within the code
@@ -141,9 +141,11 @@ void moveUpdate() {
 	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y); 
   int rotate = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
  
-  motorRightBack.move_velocity((+forward -rotate) * ATOV); 
+  motorRightBack.move_velocity((+forward -rotate) * ATOV);
+  motorRightMiddle.move_velocity((+forward -rotate) * ATOV);
   motorRightFront.move_velocity((+forward -rotate) * ATOV);
   motorLeftBack.move_velocity((+forward +rotate) * ATOV);
+  motorLeftMiddle.move_velocity((+forward +rotate) * ATOV);
   motorLeftFront.move_velocity((+forward +rotate) * ATOV);
 }
 
@@ -176,15 +178,11 @@ void clawOpen(){
 	piston.set_value(false);
 }
 
-void intake(int direction){
-  //allows for intake motors to spin the flex wheels in order to intake the triballs and also spin the other direction to output the triballs
-motorIntake.move_velocity(200*direction);
+void puncher(){  
+motorPuncher.move_absolute(720, 50);
+motorPuncher.tare_position();
 }
 
-void stopIntake(){
-  //this function allows the intake motors to stop and not run when we are not pressing the intake buttons
-  motorIntake.move_velocity(0);
-}
 //Autonmous Period Sub-Functions
 void advance(double moveInches) {
   //stop movement
