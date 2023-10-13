@@ -23,8 +23,8 @@ using namespace lcd;
 void moveUpdate();
 void brake();
 void coast();
-void puncher();
-void resetPuncher();
+void opPuncher();
+void stopOpPuncher();
 void armHorizontal();
 void armVertical();
 void flapOpen();
@@ -32,19 +32,20 @@ void flapClose();
 
 
 //auton
+void puncher();//made two different catapult functions, one for autonomous(precise) and one for operator controls
+void resetPuncher();
 void advance(double moveInches);
-void strafe(double moveInches);
 void turn(double driveDegrees);
-void runDrive(int forward);
 void autonSkills();
+void auton();
 
 //GLOBAL-SCOPE VARIABLES(Ports)
-#define PORT_LEFT_FRONT 13
-#define PORT_LEFT_MIDDLE 12
-#define PORT_LEFT_BACK 11
-#define PORT_RIGHT_FRONT 3
-#define PORT_RIGHT_MIDDLE 2
-#define PORT_RIGHT_BACK 1
+#define PORT_LEFT_FRONT 1
+#define PORT_LEFT_MIDDLE 2
+#define PORT_LEFT_BACK 3
+#define PORT_RIGHT_FRONT 11
+#define PORT_RIGHT_MIDDLE 12
+#define PORT_RIGHT_BACK 13
 #define PORT_PUNCHER 9
 #define PORT_ARM 10
 
@@ -58,19 +59,19 @@ Motor motorRightMiddle(PORT_RIGHT_MIDDLE, E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER
 Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
 
 Motor motorPuncher(PORT_PUNCHER, E_MOTOR_GEARSET_18, 0,E_MOTOR_ENCODER_DEGREES);
-Motor motorArm(PORT_ARM, E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorArm(PORT_ARM, E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
 
 const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
-const double KARSTANT = 0.552;
-const double ABBYS_CONSTANT = 0.380;
-const double ROBOT_DIAMETER = 17.334935823359; //inches
+const double ADVANCE = 0.552; //Karstant
+const double TURN = 0.380; //Abby's Constant
+const double ROBOT_DIAMETER = 23; //inches
 const double WHEEL_DIAMETER = 4; //inches
 const double PI = M_PI;
 double resetCount = 1;
 double AUTONOMOUS_SPEED = 100.0;
 double motorTemperatureDrive;
-
-
+bool isLaunch = false;
+bool isFlap = false;
 
 //TOP-LEVEL FUNCTIONS
 
@@ -80,8 +81,8 @@ void initialize() {
     lcd::initialize();
     
   }
-  ADIDigitalOut piston1('A');
-  ADIDigitalOut piston2('B');
+  ADIDigitalOut piston1('G');
+  ADIDigitalOut piston2('H');
 }
 
 
@@ -103,7 +104,7 @@ void opcontrol() {
 
   //drive loop
   motorPuncher.set_zero_position(motorPuncher.tare_position());
-  motorPuncher.set_zero_position(motorArm.tare_position());
+  motorArm.set_zero_position(motorArm.tare_position());
   while (true) {
     if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)){/*This button is what allows our robot to break if necessary*/
       brake();
@@ -115,15 +116,30 @@ void opcontrol() {
       coast();
     }
 
-    if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)){
-    puncher();
-    resetCount++;
-    if(resetCount == 5){
-      resetPuncher();
-      resetCount = 1;
+    if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)){
+    if(!isLaunch){
+      opPuncher();
+      isLaunch=true;
+    }
+    else{
+      stopOpPuncher();
+      isLaunch=false;
     }
     }
-
+    if(master.get_digital_new_press(E_CONTROLLER_DIGITAL_B)){
+    if(!isFlap){
+      flapOpen();
+      isFlap=true;
+    }
+    else{
+      flapClose();
+      isFlap=false;
+    }
+    }
+    if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)){
+      armHorizontal();
+    }
+    lcd::set_text(5, to_string((resetCount)));
     delay(10);//the delay allows for all the commands to be executed properly before the loop starts again, which reduces the chances of bugs happening within the code
    }  
 
@@ -136,6 +152,7 @@ void opcontrol() {
 //called when autonomous is selected
 void autonomous() {
   lcd::set_text(1, "Start auton");
+  auton();
 }
 
 
@@ -155,12 +172,12 @@ void moveUpdate() {
 	int forward = master.get_analog(E_CONTROLLER_ANALOG_LEFT_Y); 
   int rotate = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
  
-  motorRightBack.move_velocity((+forward -rotate) * ATOV);
-  motorRightMiddle.move_velocity((+forward -rotate) * ATOV);
-  motorRightFront.move_velocity((+forward -rotate) * ATOV);
-  motorLeftBack.move_velocity((+forward +rotate) * ATOV);
-  motorLeftMiddle.move_velocity((+forward +rotate) * ATOV);
-  motorLeftFront.move_velocity((+forward +rotate) * ATOV);
+  motorRightBack.move_velocity((+forward +rotate) * ATOV);
+  motorRightMiddle.move_velocity((+forward +rotate) * ATOV);
+  motorRightFront.move_velocity((+forward +rotate) * ATOV);
+  motorLeftBack.move_velocity((+forward -rotate) * ATOV);
+  motorLeftMiddle.move_velocity((+forward -rotate) * ATOV);
+  motorLeftFront.move_velocity((+forward -rotate) * ATOV);
 }
 
 //Breaks
@@ -184,21 +201,46 @@ void moveUpdate() {
 
 //Opening and Closing claw
 void flapOpen(){
-  ADIDigitalOut piston1('A');
-  ADIDigitalOut piston2('B');
+  ADIDigitalOut piston1('G');
+  ADIDigitalOut piston2('H');
   piston1.set_value(true);
   piston2.set_value(true);
 }
 void flapClose(){
-	ADIDigitalOut piston1('A');
-  ADIDigitalOut piston2('B');
+	ADIDigitalOut piston1('G');
+  ADIDigitalOut piston2('H');
 	piston1.set_value(false);
   piston2.set_value(false);
 }
 
+void opPuncher(){
+  motorPuncher.move_velocity(100);
+}
+
+void stopOpPuncher(){
+  motorPuncher.move_velocity(0);
+}
+
+
+void armHorizontal(){
+  motorArm.move_relative(180, 100);
+}
+
+void armVertical(){
+  motorArm.move_relative(-90, 100);
+}
+//Autonmous Period Sub-Functions
+
 void puncher(){  
 motorPuncher.move_absolute(720, 90);
+if(resetCount == 5){
+      resetPuncher();
+      resetCount = 1;
+    }
+else{
 motorPuncher.tare_position();
+resetCount++;
+}
 }
 
 void resetPuncher(){
@@ -206,20 +248,12 @@ void resetPuncher(){
   motorPuncher.tare_position();
 }
 
-void armHorizontal(){
-  motorArm.move_absolute(180, 200);
-}
-
-void armVertical(){
-  motorArm.move_absolute(-90, 100);
-}
-//Autonmous Period Sub-Functions
 void advance(double moveInches) {
   //stop movement
   brake();
 
   //inch into degree
-	double motorDegrees = moveInches / (WHEEL_DIAMETER * PI) * 360 * KARSTANT;
+	double motorDegrees = moveInches / (WHEEL_DIAMETER * PI) * 360 * ADVANCE;
 
   //robot knows its relative positions
   motorRightBack.tare_position();
@@ -255,15 +289,7 @@ void advance(double moveInches) {
 }
 
 void turn(double driveDegrees) {
-  double motorDegrees = ((360 * driveDegrees * (PI/180) * (ROBOT_DIAMETER/2)) / (WHEEL_DIAMETER)) * ABBYS_CONSTANT;
- 
-  motorRightFront .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-  motorRightMiddle.move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorRightBack .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorLeftFront  .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-  motorLeftMiddle.move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-  motorLeftBack .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-	
+  double motorDegrees = ((driveDegrees*(PI*ROBOT_DIAMETER)/WHEEL_DIAMETER)/2)*TURN;
   
   //robot knows its relative positions
   
@@ -297,8 +323,11 @@ void turn(double driveDegrees) {
 
 //Auton Period Code
 void auton(){
-advance(6);
+advance(12.0);
 turn(90);
+armHorizontal();
+delay(2000);
+armVertical();
 }
 void autonLeftHigh(){
 
