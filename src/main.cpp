@@ -25,8 +25,9 @@ void brake();
 void coast();
 void opPuncher();
 void stopOpPuncher();
-void armHorizontal();
-void armVertical();
+void armHorizontal(int direction);
+void armForward();
+void armVertical(int direction);
 void flapOpen();
 void flapClose();
 
@@ -37,7 +38,9 @@ void resetPuncher();
 void advance(double moveInches);
 void turn(double driveDegrees);
 void autonSkills();
-void auton();
+void autonBall();
+void autonBallV2();
+void autonBar();
 
 //GLOBAL-SCOPE VARIABLES(Ports)
 #define PORT_LEFT_FRONT 1
@@ -70,6 +73,7 @@ const double PI = M_PI;
 double resetCount = 1;
 double AUTONOMOUS_SPEED = 100.0;
 double motorTemperatureDrive;
+double motorArmTemp;
 bool isLaunch = false;
 bool isFlap = false;
 
@@ -105,6 +109,9 @@ void opcontrol() {
   //drive loop
   motorPuncher.set_zero_position(motorPuncher.tare_position());
   motorArm.set_zero_position(motorArm.tare_position());
+  armVertical(-1);
+  delay(50);
+  motorArm.move_velocity(0);
   while (true) {
     if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)){/*This button is what allows our robot to break if necessary*/
       brake();
@@ -112,7 +119,9 @@ void opcontrol() {
     else{
       moveUpdate();
       motorTemperatureDrive = motorRightBack.get_temperature();//this allows us to check the motor temperature of the drive in order to help troubleshoot potential problems
+      motorArmTemp = motorArm.get_temperature();
       lcd::set_text(4, to_string(motorTemperatureDrive) + " F");
+      lcd::set_text(3, to_string(motorArmTemp) + " F");
       coast();
     }
 
@@ -136,9 +145,14 @@ void opcontrol() {
       isFlap=false;
     }
     }
+
     if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)){
-      armHorizontal();
+      armHorizontal(1);
     }
+    else if(master.get_digital_new_press(E_CONTROLLER_DIGITAL_Y)){
+      armHorizontal(-1);
+    }
+
     lcd::set_text(5, to_string((resetCount)));
     delay(10);//the delay allows for all the commands to be executed properly before the loop starts again, which reduces the chances of bugs happening within the code
    }  
@@ -152,7 +166,7 @@ void opcontrol() {
 //called when autonomous is selected
 void autonomous() {
   lcd::set_text(1, "Start auton");
-  auton();
+  autonBall();
 }
 
 
@@ -222,12 +236,14 @@ void stopOpPuncher(){
 }
 
 
-void armHorizontal(){
-  motorArm.move_relative(180, 100);
+void armHorizontal(int direction){
+  motorArm.move_relative(180*direction, 100);
 }
-
-void armVertical(){
-  motorArm.move_relative(-90, 100);
+void armForward(){
+  motorArm.move_velocity(10);
+}
+void armVertical(int direction){
+  motorArm.move_relative(90*direction, 100);
 }
 //Autonmous Period Sub-Functions
 
@@ -253,7 +269,7 @@ void advance(double moveInches) {
   brake();
 
   //inch into degree
-	double motorDegrees = moveInches / (WHEEL_DIAMETER * PI) * 360 * ADVANCE;
+	double motorDegrees = 2*(moveInches) / (WHEEL_DIAMETER * PI) * 360 * ADVANCE;
 
   //robot knows its relative positions
   motorRightBack.tare_position();
@@ -317,20 +333,37 @@ void turn(double driveDegrees) {
   motorLeftBack.move_velocity(0);
 
   coast();
-  lcd::set_text(5, "Ive stopped turning");
 }
 
 
 //Auton Period Code
-void auton(){
-advance(12.0);
+void autonBall(){
+turn(-45);
+advance(-12);
 turn(90);
-armHorizontal();
-delay(2000);
-armVertical();
+advance(-7);
+armHorizontal(1);
+delay(1000);
+turn(90);
+lcd::set_text(5, "Auton Stop");
+/*
+armVertical(-1);
+delay(500);
+turn(45);
+advance(-12);
+turn(25);
+advance(-23);
+armForward();
+delay(1000);
+motorArm.move_velocity(0);
+lcd::set_text(5, "Auton Stop");
+*/
 }
-void autonLeftHigh(){
-
+void autonBar(){
+advance(-23);
+armVertical(1);
+delay(500);
+motorArm.move_velocity(0);
 }
 
 void autonR(){
