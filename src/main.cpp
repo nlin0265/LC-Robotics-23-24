@@ -38,9 +38,8 @@ void resetPuncher();
 void advance(double moveInches);
 void turn(double driveDegrees);
 void autonSkills();
-void autonBall();
-void autonBallV2();
-void autonBar();
+void autonFar();
+void autonClose();
 
 //GLOBAL-SCOPE VARIABLES(Ports)
 #define PORT_LEFT_FRONT 1
@@ -166,7 +165,7 @@ void opcontrol() {
 //called when autonomous is selected
 void autonomous() {
   lcd::set_text(1, "Start auton");
-  autonBall();
+  autonFar();
 }
 
 
@@ -337,39 +336,35 @@ void turn(double driveDegrees) {
 
 
 //Auton Period Code
-void autonBall(){
+void autonClose(){
 turn(-45);
 advance(-12);
 turn(90);
 advance(-7);
 armHorizontal(1);
 delay(1000);
-turn(90);
-lcd::set_text(5, "Auton Stop");
-/*
+turn(95);
+turn(-15);
 armVertical(-1);
 delay(500);
-turn(45);
-advance(-12);
+turn(80);
+advance(-16);
+turn(15);
 turn(25);
-advance(-23);
+advance(-18);
 armForward();
 delay(1000);
 motorArm.move_velocity(0);
 lcd::set_text(5, "Auton Stop");
-*/
+
 }
-void autonBar(){
-advance(-23);
+void autonFar(){
+advance(-12);
 armVertical(1);
 delay(500);
 motorArm.move_velocity(0);
 }
 
-void autonR(){
- 
-}
-
 void autonSkills(){
-  
+  opPuncher();
 }
