@@ -23,8 +23,10 @@ using namespace lcd;
 void moveUpdate();
 void brake();
 void coast();
-void opPuncher();
-void stopOpPuncher();
+void catapult();
+void stopCatapult();
+void lockCatapult();
+void releaseCatapult();
 void armHorizontal(int direction);
 void armForward();
 void armVertical(int direction);
@@ -48,7 +50,7 @@ void autonClose();
 #define PORT_RIGHT_FRONT 11
 #define PORT_RIGHT_MIDDLE 12
 #define PORT_RIGHT_BACK 13
-#define PORT_PUNCHER 9
+#define PORT_CATAPULT 9
 #define PORT_ARM 10
 
 //FILE-SCOPE VARIABLE
@@ -60,7 +62,7 @@ Motor motorRightFront(PORT_RIGHT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER
 Motor motorRightMiddle(PORT_RIGHT_MIDDLE, E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
 Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
 
-Motor motorPuncher(PORT_PUNCHER, E_MOTOR_GEARSET_18, 0,E_MOTOR_ENCODER_DEGREES);
+Motor motorCatapult(PORT_CATAPULT, E_MOTOR_GEARSET_18, 0,E_MOTOR_ENCODER_DEGREES);
 Motor motorArm(PORT_ARM, E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
 
 const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
@@ -75,6 +77,7 @@ double motorTemperatureDrive;
 double motorArmTemp;
 bool isLaunch = false;
 bool isFlap = false;
+bool isLock = false;
 
 //TOP-LEVEL FUNCTIONS
 
@@ -106,7 +109,6 @@ void opcontrol() {
   }
 
   //drive loop
-  motorPuncher.set_zero_position(motorPuncher.tare_position());
   motorArm.set_zero_position(motorArm.tare_position());
   armVertical(-1);
   delay(50);
@@ -126,14 +128,18 @@ void opcontrol() {
 
     if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)){
     if(!isLaunch){
-      opPuncher();
+      catapult();
       isLaunch=true;
     }
     else{
-      stopOpPuncher();
+      stopCatapult();
       isLaunch=false;
     }
     }
+    if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L1)){
+      lockCatapult();
+    }
+    
     if(master.get_digital_new_press(E_CONTROLLER_DIGITAL_B)){
     if(!isFlap){
       flapOpen();
@@ -144,6 +150,8 @@ void opcontrol() {
       isFlap=false;
     }
     }
+    
+
 
     if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)){
       armHorizontal(1);
@@ -226,15 +234,17 @@ void flapClose(){
   piston2.set_value(false);
 }
 
-void opPuncher(){
-  motorPuncher.move_velocity(100);
+void catapult(){
+  motorCatapult.move_velocity(-100);
 }
 
-void stopOpPuncher(){
-  motorPuncher.move_velocity(0);
+void stopCatapult(){
+  motorCatapult.move_velocity(0);
 }
 
-
+void lockCatapult(){
+  motorCatapult.move_relative(-690, 50);
+}
 void armHorizontal(int direction){
   motorArm.move_relative(180*direction, 100);
 }
@@ -245,23 +255,6 @@ void armVertical(int direction){
   motorArm.move_relative(90*direction, 100);
 }
 //Autonmous Period Sub-Functions
-
-void puncher(){  
-motorPuncher.move_absolute(720, 90);
-if(resetCount == 5){
-      resetPuncher();
-      resetCount = 1;
-    }
-else{
-motorPuncher.tare_position();
-resetCount++;
-}
-}
-
-void resetPuncher(){
-  motorPuncher.move_absolute(-10, 100);
-  motorPuncher.tare_position();
-}
 
 void advance(double moveInches) {
   //stop movement
@@ -359,12 +352,15 @@ lcd::set_text(5, "Auton Stop");
 
 }
 void autonFar(){
-advance(-12);
+advance(29);
+advance(-21);
+/*advance(-12);
 armVertical(1);
-delay(500);
-motorArm.move_velocity(0);
+armForward();
+delay(5000);
+motorArm.move_velocity(0);*/
 }
 
 void autonSkills(){
-  opPuncher();
+  catapult();
 }
