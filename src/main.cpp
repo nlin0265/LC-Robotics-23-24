@@ -44,14 +44,14 @@ void autonFar();
 void autonClose();
 
 //GLOBAL-SCOPE VARIABLES(Ports)
-#define PORT_LEFT_FRONT 1
-#define PORT_LEFT_MIDDLE 2
+#define PORT_LEFT_FRONT 5
+#define PORT_LEFT_MIDDLE 4
 #define PORT_LEFT_BACK 3
-#define PORT_RIGHT_FRONT 11
-#define PORT_RIGHT_MIDDLE 12
-#define PORT_RIGHT_BACK 13
-#define PORT_CATAPULT 9
-#define PORT_ARM 10
+#define PORT_RIGHT_FRONT 10
+#define PORT_RIGHT_MIDDLE 9
+#define PORT_RIGHT_BACK 8
+#define PORT_CATAPULT 6
+#define PORT_ARM 7
 
 //FILE-SCOPE VARIABLE
 Controller master (E_CONTROLLER_MASTER);
@@ -87,8 +87,7 @@ void initialize() {
     lcd::initialize();
     
   }
-  ADIDigitalOut piston1('G');
-  ADIDigitalOut piston2('H');
+  ADIDigitalOut piston1('H');
 }
 
 
@@ -151,8 +150,6 @@ void opcontrol() {
     }
     }
     
-
-
     if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)){
       armHorizontal(1);
     }
@@ -160,7 +157,6 @@ void opcontrol() {
       armHorizontal(-1);
     }
 
-    lcd::set_text(5, to_string((resetCount)));
     delay(10);//the delay allows for all the commands to be executed properly before the loop starts again, which reduces the chances of bugs happening within the code
    }  
 
@@ -173,7 +169,7 @@ void opcontrol() {
 //called when autonomous is selected
 void autonomous() {
   lcd::set_text(1, "Start auton");
-  autonFar();
+  autonSkills();
 }
 
 
@@ -222,20 +218,16 @@ void moveUpdate() {
 
 //Opening and Closing claw
 void flapOpen(){
-  ADIDigitalOut piston1('G');
-  ADIDigitalOut piston2('H');
+  ADIDigitalOut piston1('H');
   piston1.set_value(true);
-  piston2.set_value(true);
 }
 void flapClose(){
-	ADIDigitalOut piston1('G');
-  ADIDigitalOut piston2('H');
-	piston1.set_value(false);
-  piston2.set_value(false);
+  ADIDigitalOut piston1('H');
+  piston1.set_value(false);
 }
 
 void catapult(){
-  motorCatapult.move_velocity(-100);
+  motorCatapult.move_velocity(-90);
 }
 
 void stopCatapult(){
@@ -243,13 +235,13 @@ void stopCatapult(){
 }
 
 void lockCatapult(){
-  motorCatapult.move_relative(-690, 50);
+  motorCatapult.move_relative(-660, 50);
 }
 void armHorizontal(int direction){
   motorArm.move_relative(180*direction, 100);
 }
 void armForward(){
-  motorArm.move_velocity(10);
+  motorArm.move_velocity(50);
 }
 void armVertical(int direction){
   motorArm.move_relative(90*direction, 100);
@@ -333,7 +325,7 @@ void autonClose(){
 turn(-45);
 advance(-12);
 turn(90);
-advance(-7);
+advance(-6);
 armHorizontal(1);
 delay(1000);
 turn(95);
@@ -342,23 +334,19 @@ armVertical(-1);
 delay(500);
 turn(80);
 advance(-16);
-turn(15);
 turn(25);
-advance(-18);
+advance(-12);
 armForward();
-delay(1000);
-motorArm.move_velocity(0);
 lcd::set_text(5, "Auton Stop");
 
 }
 void autonFar(){
 advance(29);
-advance(-21);
-/*advance(-12);
+advance(-28.5);
+turn(-55);
+advance(-20);
 armVertical(1);
 armForward();
-delay(5000);
-motorArm.move_velocity(0);*/
 }
 
 void autonSkills(){
