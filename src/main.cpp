@@ -29,6 +29,8 @@ void lockCatapult();
 void releaseCatapult();
 void flapOpen();
 void flapClose();
+void intakeClose();
+void intakeOpen();
 
 
 //auton
@@ -44,24 +46,21 @@ void autonClose();
 //GLOBAL-SCOPE VARIABLES(Ports)
 #define PORT_LEFT_FRONT 5
 #define PORT_LEFT_MIDDLE 4
-#define PORT_LEFT_BACK_MIDDLE 3
-#define PORT_LEFT_BACK 2
+#define PORT_LEFT_BACK 3
+
 #define PORT_RIGHT_FRONT 10
 #define PORT_RIGHT_MIDDLE 9
-#define PORT_RIGHT_BACK_MIDDLE 8
-#define PORT_RIGHT_BACK 7
+#define PORT_RIGHT_BACK 8
 #define PORT_CATAPULT 6
 
 //FILE-SCOPE VARIABLE
 Controller master (E_CONTROLLER_MASTER);
 Motor motorLeftFront   (PORT_LEFT_FRONT,   E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
 Motor motorLeftMiddle(PORT_LEFT_MIDDLE, E_MOTOR_GEARSET_18, 1, E_MOTOR_ENCODER_DEGREES);
-Motor motorLeftBackMiddle  (PORT_LEFT_BACK_MIDDLE,  E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorLeftBack(PORT_LEFT_BACK, E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorLeftBack  (PORT_LEFT_BACK,  E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
 Motor motorRightFront(PORT_RIGHT_FRONT,   E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
 Motor motorRightMiddle(PORT_RIGHT_MIDDLE, E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
-Motor motorRightBackMiddle(PORT_RIGHT_BACK_MIDDLE, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
-Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 0, E_MOTOR_ENCODER_DEGREES);
+Motor motorRightBack(PORT_RIGHT_BACK, E_MOTOR_GEARSET_18, 1, pros::E_MOTOR_ENCODER_DEGREES);
 Motor motorCatapult(PORT_CATAPULT, E_MOTOR_GEARSET_18, 1,E_MOTOR_ENCODER_DEGREES);
 
 const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
@@ -75,7 +74,7 @@ double AUTONOMOUS_SPEED = 100.0;
 double motorTemperatureDrive;
 bool isLaunch = false;
 bool isFlap = false;
-bool isLock = false;
+bool isIntake = false;
 
 //TOP-LEVEL FUNCTIONS
 
@@ -85,7 +84,8 @@ void initialize() {
     lcd::initialize();
     
   }
-  ADIDigitalOut piston1('H');
+  ADIDigitalOut piston1('G');
+  ADIDigitalOut intake('H');
 }
 
 
@@ -121,7 +121,7 @@ void opcontrol() {
       coast();
     }
 
-    if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)){
+    if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)){
     if(!isLaunch){
       catapult();
       isLaunch=true;
@@ -135,7 +135,7 @@ void opcontrol() {
       lockCatapult();
     }
     
-    if(master.get_digital_new_press(E_CONTROLLER_DIGITAL_B)){
+  if(master.get_digital_new_press(E_CONTROLLER_DIGITAL_B)){
     if(!isFlap){
       flapOpen();
       isFlap=true;
@@ -143,6 +143,17 @@ void opcontrol() {
     else{
       flapClose();
       isFlap=false;
+    }
+    }
+
+  if(master.get_digital_new_press(E_CONTROLLER_DIGITAL_A)){
+      if(!isIntake){
+        intakeClose();
+        isIntake=true;
+    }
+      else{
+      intakeOpen();
+      isIntake=false;
     }
     }
     
@@ -159,7 +170,7 @@ void opcontrol() {
 //called when autonomous is selected
 void autonomous() {
   lcd::set_text(1, "Start auton");
-  autonSkills();
+  autonClose();
 }
 
 
@@ -180,11 +191,9 @@ void moveUpdate() {
   int moveL = master.get_analog(E_CONTROLLER_ANALOG_RIGHT_Y);
  
   motorRightBack.move_velocity((+moveR)*ATOV);
-  motorRightBackMiddle.move_velocity((+moveR) * ATOV);
   motorRightMiddle.move_velocity((+moveR) * ATOV);
   motorRightFront.move_velocity((+moveR) * ATOV);
   motorLeftBack.move_velocity((+moveL)*ATOV);
-  motorLeftBackMiddle.move_velocity((+moveL) * ATOV);
   motorLeftMiddle.move_velocity((+moveL) * ATOV);
   motorLeftFront.move_velocity((+moveL) * ATOV);
 }
@@ -210,16 +219,25 @@ void moveUpdate() {
 
 //Opening and Closing claw
 void flapOpen(){
-  ADIDigitalOut piston1('H');
+  ADIDigitalOut piston1('G');
   piston1.set_value(true);
 }
 void flapClose(){
-  ADIDigitalOut piston1('H');
+  ADIDigitalOut piston1('G');
   piston1.set_value(false);
 }
 
+void intakeClose(){
+  ADIDigitalOut intake('H');
+  intake.set_value(true);
+}
+
+void intakeOpen(){
+  ADIDigitalOut intake('H');
+  intake.set_value(false);
+}
 void catapult(){
-  motorCatapult.move_velocity(90);
+  motorCatapult.move_velocity(100);
 }
 
 void stopCatapult(){
@@ -239,18 +257,18 @@ void advance(double moveInches) {
 	double motorDegrees = 2*(moveInches) / (WHEEL_DIAMETER * PI) * 360 * ADVANCE;
 
   //robot knows its relative positions
-  motorRightBackMiddle.tare_position();
+  motorRightBack.tare_position();
   motorRightMiddle.tare_position();
   motorRightFront.tare_position();
-  motorLeftBackMiddle.tare_position();
+  motorLeftBack.tare_position();
   motorLeftMiddle.tare_position();
   motorLeftFront.tare_position();
   
   //move robot
-	motorRightBackMiddle .move_relative(motorDegrees, AUTONOMOUS_SPEED);
+	motorRightBack .move_relative(motorDegrees, AUTONOMOUS_SPEED);
 	motorRightMiddle.move_relative(motorDegrees, AUTONOMOUS_SPEED);
 	motorRightFront .move_relative(motorDegrees, AUTONOMOUS_SPEED);
-  motorLeftBackMiddle  .move_relative(motorDegrees, AUTONOMOUS_SPEED);
+  motorLeftBack  .move_relative(motorDegrees, AUTONOMOUS_SPEED);
   motorLeftMiddle.move_relative(motorDegrees, AUTONOMOUS_SPEED);
   motorLeftFront  .move_relative(motorDegrees, AUTONOMOUS_SPEED);
 
@@ -263,8 +281,8 @@ void advance(double moveInches) {
   
   motorRightFront.move_velocity(0);
   motorRightMiddle.move_velocity(0);
-  motorRightBackMiddle.move_velocity(0);
-  motorLeftBackMiddle.move_velocity(0);
+  motorRightBack.move_velocity(0);
+  motorLeftBack.move_velocity(0);
   motorLeftMiddle.move_velocity(0);
   motorLeftFront.move_velocity(0);
 
@@ -280,24 +298,26 @@ void turn(double driveDegrees) {
   motorRightFront.tare_position();
 
   //move robot
-  motorRightFront .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+
+  motorRightFront.move_relative(-motorDegrees, AUTONOMOUS_SPEED);
   motorRightMiddle.move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorRightBackMiddle .move_relative(-motorDegrees, AUTONOMOUS_SPEED);
-	motorLeftFront  .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
+	motorRightBack.move_relative(-motorDegrees, AUTONOMOUS_SPEED);
+	motorLeftFront.move_relative(+motorDegrees, AUTONOMOUS_SPEED);
   motorLeftMiddle.move_relative(+motorDegrees, AUTONOMOUS_SPEED);
-  motorLeftBackMiddle .move_relative(+motorDegrees, AUTONOMOUS_SPEED);
+  motorLeftBack.move_relative(+motorDegrees, AUTONOMOUS_SPEED);
 
   //elimainates momentum
+
   while(!(motorLeftFront.get_position() < (motorDegrees + 2) && motorLeftFront.get_position() > (motorDegrees-2))){
     delay(20);
   }
   
-  motorRightBackMiddle.move_velocity(0);
+  motorRightBack.move_velocity(0);
   motorRightMiddle.move_velocity(0);
   motorRightFront.move_velocity(0);
   motorLeftFront.move_velocity(0);
   motorLeftMiddle.move_velocity(0);
-  motorLeftBackMiddle.move_velocity(0);
+  motorLeftBack.move_velocity(0);
 
   coast();
 }
@@ -305,25 +325,56 @@ void turn(double driveDegrees) {
 
 //Auton Period Code
 void autonClose(){
-advance(-8.5);
+intakeClose();
+advance(-8.2);
 flapOpen();
-delay(100);
-advance(3);
-delay(500);
+turn(45);
+delay(200);
 flapClose();
-turn(45);
+turn(-60);
+advance(-11);
+intakeOpen();
+advance(8.5);
+turn(230);
 advance(12);
+turn(-35);
+advance(3.5);
+advance(-4);
 turn(45);
-advance(26);
+advance(-18);
+turn(-190);
+advance(32);
+delay(100);
+turn(-20);
 flapOpen();
+
+
 
 }
 void autonFar(){
-advance(26);
-advance(-24);
-turn(160);
-advance(33);
+intakeClose();
+advance(8);
 flapOpen();
+turn(70);
+turn(-25);
+flapClose();
+advance(18);
+turn(45);
+advance(4);
+advance(-6);
+turn(250);
+advance(-10);
+intakeOpen();
+delay(100);
+advance(4);
+delay(100);
+advance(8.5);
+turn(-45);
+advance(21.5);
+turn(-70);
+advance(32);
+flapOpen();
+
 
 
 
