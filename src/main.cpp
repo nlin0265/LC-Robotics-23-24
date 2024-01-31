@@ -44,12 +44,12 @@ void autonClose();
 //GLOBAL-SCOPE VARIABLES(Ports)
 #define PORT_LEFT_TOP 6
 #define PORT_LEFT_BOTTOM 10
-#define PORT_LEFT_BACK 5
+#define PORT_LEFT_BACK 4
 #define PORT_RIGHT_TOP 16
 #define PORT_RIGHT_BOTTOM 20 
 #define PORT_RIGHT_BACK 15
 #define PORT_INTAKE 11
-#define PORT_FLYWHEEL 19
+#define PORT_FLYWHEEL 18
 
 //FILE-SCOPE VARIABLE
 Controller master (E_CONTROLLER_MASTER);
@@ -65,11 +65,11 @@ Motor motorFlyWheel(PORT_FLYWHEEL, E_MOTOR_GEAR_BLUE, 0, E_MOTOR_ENCODER_DEGREES
 const double ATOV = 200.0/(128.0/3.0); //analog input to velocity output (equals 4.6875)
 const double ADVANCE = 0.552; //Karstant
 const double TURN = 0.380; //Abby's Constant
-const double ROBOT_DIAMETER = 23; //inches
-const double WHEEL_DIAMETER = 4; //inches
+const double ROBOT_DIAMETER = 16; //inches
+const double WHEEL_DIAMETER = 3; //inches
 const double PI = M_PI;
 double resetCount = 1;
-double AUTONOMOUS_SPEED = 100.0;
+double AUTONOMOUS_SPEED = 300.0;
 double motorTemperatureDrive;
 bool isFlyWheel = false;
 bool isFlap = false;
@@ -125,17 +125,18 @@ void opcontrol() {
     else{
       stopFlywheel();
     }
-    }
-
     if(master.get_digital(E_CONTROLLER_DIGITAL_R1)){
      runIntake(1);
     }
     else if (master.get_digital(E_CONTROLLER_DIGITAL_R2)){
     runIntake(-1);
-  }
+    }
     else{
     stopIntake();
     }
+    }
+
+    
 
     delay(10);//the delay allows for all the commands to be executed properly before the loop starts again, which reduces the chances of bugs happening within the code
     }
@@ -261,8 +262,8 @@ void turn(double driveDegrees) {
   
   //robot knows its relative positions
   
-  motorLeftTop.tare_position();
-  motorRightTop.tare_position();
+  motorLeftBottom.tare_position();
+  motorRightBottom.tare_position();
 
   //move robot
 
@@ -292,15 +293,34 @@ void turn(double driveDegrees) {
 
 //Auton Period Code
 void autonClose(){
-advance(10);
-turn(180);
-
+advance(30);
+turn(125);
+advance(20);
+runIntake(-1);
+delay(800);
+advance(-3);
+advance(6);
+stopIntake();
+advance(-6);
+//turn(180);
+//advance(75);
+//turn(90);
 }
 void autonFar(){
-
+advance(20);
+turn(-125);
+advance(25);
+runIntake(-1);
+delay(800);
+advance(-3);
+advance(6);
+stopIntake();
+//advance(-6);
+//turn(-100);
 }
 
 void autonSkills(){
+  runFlywheel(-1);
 }
 
 void autonSkills2(){
